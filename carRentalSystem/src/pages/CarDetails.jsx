@@ -8,7 +8,7 @@ import toast from "react-hot-toast";
 const CarDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { axios, currency } = useAppContext();
+  const { axios, currency, user } = useAppContext();
 
   const [car, setCar] = useState(null);
   const [pickupDate, setPickupDate] = useState("");
@@ -17,7 +17,7 @@ const CarDetails = () => {
 
   const today = new Date().toISOString().split("T")[0];
 
-  // 🔥 Fetch car from backend
+  // ✅ Fetch Single Car
   const fetchCar = async () => {
     try {
       const { data } = await axios.get(`/api/user/cars`);
@@ -26,6 +26,13 @@ const CarDetails = () => {
         const selectedCar = data.cars.find(
           (c) => c._id === id
         );
+
+        if (!selectedCar) {
+          toast.error("Car not found");
+          navigate("/cars");
+          return;
+        }
+
         setCar(selectedCar);
       }
     } catch (error) {
@@ -37,21 +44,31 @@ const CarDetails = () => {
     fetchCar();
   }, [id]);
 
-  // 🔥 Calculate total days
+  // ✅ Calculate days safely
   const calculateDays = () => {
     if (!pickupDate || !returnDate) return 0;
+
     const start = new Date(pickupDate);
     const end = new Date(returnDate);
-    const diff = (end - start) / (1000 * 60 * 60 * 24);
+
+    const diff = Math.ceil(
+      (end - start) / (1000 * 60 * 60 * 24)
+    );
+
     return diff > 0 ? diff : 0;
   };
 
   const totalDays = calculateDays();
   const totalPrice = totalDays * (car?.pricePerDay || 0);
 
-  // 🔥 Booking Submit
+  // ✅ Booking Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!user) {
+      toast.error("Please login first");
+      return;
+    }
 
     if (!pickupDate || !returnDate) {
       toast.error("Please select dates");
@@ -69,7 +86,7 @@ const CarDetails = () => {
       const { data } = await axios.post(
         "/api/booking/create",
         {
-          carId: car._id,
+          car: car._id,   // ✅ FIXED KEY
           pickupDate,
           returnDate,
         }
@@ -81,8 +98,11 @@ const CarDetails = () => {
       } else {
         toast.error(data.message);
       }
+
     } catch (error) {
-      toast.error(error.response?.data?.message || error.message);
+      toast.error(
+        error.response?.data?.message || error.message
+      );
     } finally {
       setLoading(false);
     }
@@ -93,7 +113,7 @@ const CarDetails = () => {
   return (
     <div className="px-6 md:px-16 lg:px-24 xl:px-32 mt-20">
 
-      {/* Back */}
+      {/* Back Button */}
       <button
         onClick={() => navigate(-1)}
         className="flex items-center gap-2 mb-8 mt-8 text-gray-500 hover:text-red-600 transition"
@@ -108,8 +128,9 @@ const CarDetails = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
 
-        {/* Left */}
+        {/* LEFT SECTION */}
         <div className="lg:col-span-2">
+
           <img
             src={car.image}
             alt=""
@@ -119,10 +140,12 @@ const CarDetails = () => {
           <h1 className="text-3xl font-bold">
             {car.brand} {car.model}
           </h1>
+
           <p className="text-gray-500 mt-2">
             {car.category} • {car.year}
           </p>
 
+          {/* Specs */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8">
             <Spec icon={assets.users_icon} text={`${car.seating_capacity} Seats`} />
             <Spec icon={assets.fuel_icon} text={car.fuel_type} />
@@ -130,13 +153,18 @@ const CarDetails = () => {
             <Spec icon={assets.location_icon} text={car.location} />
           </div>
 
+          {/* Description */}
           <div className="mt-8">
-            <h2 className="text-xl font-semibold mb-3">Description</h2>
-            <p className="text-gray-600">{car.description}</p>
+            <h2 className="text-xl font-semibold mb-3">
+              Description
+            </h2>
+            <p className="text-gray-600">
+              {car.description}
+            </p>
           </div>
         </div>
 
-        {/* Booking Card */}
+        {/* BOOKING CARD */}
         <form
           onSubmit={handleSubmit}
           className="bg-white shadow-xl rounded-2xl p-6 h-fit sticky top-24"
@@ -184,7 +212,7 @@ const CarDetails = () => {
           <button
             type="submit"
             disabled={loading}
-            className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl transition"
+            className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl transition disabled:opacity-50"
           >
             {loading ? "Booking..." : "Book Now"}
           </button>
@@ -202,7 +230,7 @@ const CarDetails = () => {
 export default CarDetails;
 
 
-// 🔥 Small reusable component
+// Small reusable component
 const Spec = ({ icon, text }) => (
   <div className="flex flex-col items-center bg-gray-50 p-4 rounded-xl">
     <img src={icon} alt="" className="h-5 mb-2 opacity-70" />

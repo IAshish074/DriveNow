@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { assets } from "../assets/assets";
 import { useAppContext } from "../context/AppContext";
+import {motion} from 'motion/react'
 import toast from "react-hot-toast";
 
 const Hero = () => {
@@ -38,19 +39,31 @@ const Hero = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-12 bg-gradient-to-br from-gray-50 to-gray-100 px-6 text-center">
+    <motion.div 
+    initial = {{ opacity:0}}
+    animate={{y:0,opacity:1}}
+    transition={{duration:0.8}}
+    
+    className="min-h-screen flex flex-col items-center justify-center gap-12 bg-gradient-to-br from-gray-50 to-gray-100 px-6 text-center">
 
       {/* Heading */}
-      <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800">
+      <motion.h1 
+      initial={{y:50,opacity:0}}
+      animate={{y:0,opacity:1}}
+      transition={{duration:0.8,delay:0.2}}
+      className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800">
         Luxury Cars on Rent
-      </h1>
+      </motion.h1>
 
       <p className="text-gray-500 max-w-xl">
         Choose your location and dates to explore our premium collection of cars.
       </p>
 
       {/* Search Form */}
-      <form
+      <motion.form
+      initial={{scale:0.95,opacity:0,y:50}}
+      animate={{scale:1,opacity:1,y:0}}
+      transition={{duration:0.6,delay:0.4}}
         onSubmit={handleSubmit}
         className="flex flex-col md:flex-row items-center gap-6 bg-white 
                    p-6 rounded-2xl md:rounded-full shadow-lg 
@@ -96,7 +109,10 @@ const Hero = () => {
         />
 
         {/* Search Button */}
-        <button
+        <motion.button
+        whileHover={{scale:1.05 , }}
+        whileTap={{scale:0.95}}
+
           type="submit"
           className="flex items-center justify-center gap-2 
                      px-8 py-3 bg-red-600 hover:bg-red-700 
@@ -108,17 +124,20 @@ const Hero = () => {
             className="w-4 brightness-200"
           />
           Search
-        </button>
-      </form>
+        </motion.button>
+      </motion.form>
 
       {/* Car Image */}
-      <img
+      <motion.img
+      initial = {{y:100,opacity:0}}
+      animate = {{y:0,opacity:1}}
+      transition={{duration:0.8,delay:0.6}}
         src={assets.main_car}
         alt="car"
         className="w-full max-w-3xl object-contain"
       />
 
-    </div>
+    </motion.div>
   );
 };
 

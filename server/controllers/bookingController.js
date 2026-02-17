@@ -1,18 +1,17 @@
-const Booking = require("../models/Booking.js");
-const Car = require("../models/car.js");
-
+const Booking = require("../models/Booking");
+const Car = require("../models/car");
 
 // ===== Check Car Availability =====
-const checkAvailability = async (car, pickupDate, returnDate) => {
+const checkAvailability = async (carId, pickupDate, returnDate) => {
+
   const bookings = await Booking.find({
-    car,
-    pickupDate: { $lte: returnDate },
-    returnDate: { $gte: pickupDate },
+    car: carId,
+    pickupDate: { $lt: new Date(returnDate) },
+    returnDate: { $gt: new Date(pickupDate) },
   });
 
   return bookings.length === 0;
 };
-
 
 
 // ===== Check Available Cars =====
@@ -20,31 +19,35 @@ exports.checkAvailabilityOfCar = async (req, res) => {
   try {
     const { location, pickupDate, returnDate } = req.body;
 
+    if (!location || !pickupDate || !returnDate) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required"
+      });
+    }
+
     const cars = await Car.find({
       location,
       isAvailable: true,
     });
 
-    const availableCarsPromises = cars.map(async (car) => {
-      const isAvailable = await checkAvailability(
+    const availableCars = [];
+
+    for (let car of cars) {
+      const available = await checkAvailability(
         car._id,
         pickupDate,
         returnDate
       );
 
-      return { ...car._doc, isAvailable };
-    });
-
-    let availableCars = await Promise.all(availableCarsPromises);
-
-    availableCars = availableCars.filter(
-      (car) => car.isAvailable === true
-    );
+      if (available) {
+        availableCars.push(car);
+      }
+    }
 
     res.json({ success: true, availableCars });
 
   } catch (error) {
-    console.log(error.message);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -70,6 +73,15 @@ exports.createBooking = async (req, res) => {
       });
     }
 
+    const carData = await Car.findById(car);
+
+    if (!carData) {
+      return res.status(404).json({
+        success: false,
+        message: "Car not found",
+      });
+    }
+
     const isAvailable = await checkAvailability(
       car,
       pickupDate,
@@ -82,8 +94,6 @@ exports.createBooking = async (req, res) => {
         message: "Car is not available",
       });
     }
-
-    const carData = await Car.findById(car);
 
     const noOfDays = Math.ceil(
       (returned - picked) / (1000 * 60 * 60 * 24)
@@ -106,7 +116,6 @@ exports.createBooking = async (req, res) => {
     });
 
   } catch (error) {
-    console.log(error.message);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -128,7 +137,6 @@ exports.getUserBookings = async (req, res) => {
     res.json({ success: true, bookings });
 
   } catch (error) {
-    console.log(error.message);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -152,13 +160,11 @@ exports.getOwnerBookings = async (req, res) => {
       owner: req.user._id,
     })
       .populate("car user")
-      .select("-user.password")
       .sort({ createdAt: -1 });
 
     res.json({ success: true, bookings });
 
   } catch (error) {
-    console.log(error.message);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -171,7 +177,6 @@ exports.getOwnerBookings = async (req, res) => {
 // ===== Change Booking Status =====
 exports.changeBookingStatus = async (req, res) => {
   try {
-    const { _id } = req.user;
     const { bookingId, status } = req.body;
 
     const booking = await Booking.findById(bookingId);
@@ -183,7 +188,7 @@ exports.changeBookingStatus = async (req, res) => {
       });
     }
 
-    if (booking.owner.toString() !== _id.toString()) {
+    if (booking.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized",
@@ -199,7 +204,6 @@ exports.changeBookingStatus = async (req, res) => {
     });
 
   } catch (error) {
-    console.log(error.message);
     res.status(500).json({
       success: false,
       message: error.message,

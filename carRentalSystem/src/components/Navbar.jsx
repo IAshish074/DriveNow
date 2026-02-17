@@ -4,6 +4,7 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { useAppContext } from "../context/AppContext.jsx";
 import toast from "react-hot-toast";
+import { motion } from "framer-motion";   // ✅ FIXED
 
 const Navbar = () => {
   const {
@@ -19,7 +20,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Close menu on route change
+  // Close mobile menu on route change
   useEffect(() => {
     setOpen(false);
   }, [location.pathname]);
@@ -43,22 +44,38 @@ const Navbar = () => {
         toast.error(data.message);
       }
     } catch (error) {
-      toast.error(error.message);
+      toast.error(
+        error.response?.data?.message ||
+          error.message
+      );
     }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    setIsOwner(false);   // ✅ ensure owner reset
   };
 
   return (
     <>
-      <div className="w-full fixed top-0 left-0 bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md z-50">
-
+      {/* ===== NAVBAR ===== */}
+      <motion.div
+        initial={{ y: -20 , opacity:0 }}
+        animate={{ y: 0 , opacity:1}}
+        transition={{ duration: 0.5 }}
+        className="w-full fixed top-0 left-0 bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md z-50"
+      >
         <div className="flex items-center justify-between px-4 sm:px-6 py-4">
 
           {/* Logo */}
           <NavLink to="/">
-            <img src={assets.logo} alt="logo" className="h-8" />
+            <motion.img 
+            whileHover={{scale:1.05}}
+            
+            src={assets.logo} alt="logo" className="h-8" />
           </NavLink>
 
-          {/* Desktop Menu */}
+          {/* ===== DESKTOP ===== */}
           <div className="hidden md:flex items-center gap-8">
 
             {menuLinks.map((link, index) => (
@@ -66,7 +83,7 @@ const Navbar = () => {
                 key={index}
                 to={link.path}
                 className={({ isActive }) =>
-                  `transition duration-200 ${
+                  `transition ${
                     isActive
                       ? "text-yellow-300 font-semibold"
                       : "hover:text-red-200"
@@ -83,7 +100,7 @@ const Navbar = () => {
                 isOwner ? navigate("/owner") : changeRole()
               }
               className={`px-4 py-1.5 rounded-full border border-white/70 transition ${
-                location.pathname === "/owner"
+                location.pathname.startsWith("/owner")
                   ? "bg-white text-red-600"
                   : "hover:bg-white/10"
               }`}
@@ -92,17 +109,32 @@ const Navbar = () => {
             </button>
 
             {/* Login / Logout */}
-            <button
-              onClick={() =>
-                user ? logout() : setShowLogin(true)
-              }
-              className="px-4 py-1.5 rounded-full bg-white text-red-600 font-medium hover:bg-red-100 transition"
-            >
-              {user ? "Logout" : "Login"}
-            </button>
+            {user ? (
+              <div className="flex items-center gap-4">
+
+                <span className="text-sm">
+                  Hi, {user.name}
+                </span>
+
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-1.5 rounded-full bg-white text-red-600 font-medium hover:bg-red-100 transition"
+                >
+                  Logout
+                </button>
+
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowLogin(true)}
+                className="px-4 py-1.5 rounded-full bg-white text-red-600 font-medium hover:bg-red-100 transition"
+              >
+                Login
+              </button>
+            )}
           </div>
 
-          {/* Hamburger (Mobile) */}
+          {/* ===== MOBILE BUTTON ===== */}
           <button
             className="md:hidden p-2 rounded-md hover:bg-white/10 transition"
             onClick={() => setOpen(true)}
@@ -110,11 +142,11 @@ const Navbar = () => {
             <Menu size={26} />
           </button>
         </div>
-      </div>
+      </motion.div>
 
       {/* ===== MOBILE DRAWER ===== */}
       <div
-        className={`fixed inset-0 z-40 transition-all duration-300 ${
+        className={`fixed inset-0 z-40 transition-all ${
           open ? "visible" : "invisible"
         }`}
       >
@@ -128,18 +160,16 @@ const Navbar = () => {
 
         {/* Drawer */}
         <div
-          className={`absolute top-0 right-0 w-64 h-full bg-red-700 text-white p-6 transform transition-transform duration-300 ${
+          className={`absolute top-0 right-0 w-64 h-full bg-red-700 text-white p-6 transform transition-transform ${
             open ? "translate-x-0" : "translate-x-full"
           }`}
         >
-          {/* Close */}
           <div className="flex justify-end mb-6">
             <button onClick={() => setOpen(false)}>
               <X size={24} />
             </button>
           </div>
 
-          {/* Links */}
           <div className="flex flex-col gap-6">
 
             {menuLinks.map((link, index) => (
@@ -173,18 +203,27 @@ const Navbar = () => {
             </button>
 
             {/* Login / Logout */}
-            <button
-              onClick={() => {
-                setOpen(false);
-                user
-                  ? logout()
-                  : setShowLogin(true);
-              }}
-              className="px-4 py-2 rounded-full bg-white text-red-600 font-medium hover:bg-red-100 transition"
-            >
-              {user ? "Logout" : "Login"}
-            </button>
-
+            {user ? (
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  handleLogout();
+                }}
+                className="px-4 py-2 rounded-full bg-white text-red-600 font-medium"
+              >
+                Logout
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  setShowLogin(true);
+                }}
+                className="px-4 py-2 rounded-full bg-white text-red-600 font-medium"
+              >
+                Login
+              </button>
+            )}
           </div>
         </div>
       </div>
