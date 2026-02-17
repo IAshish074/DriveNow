@@ -1,6 +1,7 @@
 const User = require("../models/users.js");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const Car = require("../models/car.js");
 
 // ===== Generate JWT Token =====
 const generateToken = (userId) => {
@@ -11,7 +12,15 @@ const generateToken = (userId) => {
   );
 };
 
-// ===== Register User =====
+// ===== Cookie Options (Reusable) =====
+const cookieOptions = {
+  httpOnly: true,
+  secure: false,        // 🔥 localhost ke liye false
+  sameSite: "lax",      // 🔥 strict se lax better for dev
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
+
+// ===== Register =====
 const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -19,13 +28,11 @@ const registerUser = async (req, res) => {
     if (!name || !email || !password || password.length < 8) {
       return res.status(400).json({
         success: false,
-        message:
-          "Fill all required fields. Password must be at least 8 characters.",
+        message: "Password must be at least 8 characters.",
       });
     }
 
     const userExists = await User.findOne({ email });
-
     if (userExists) {
       return res.status(400).json({
         success: false,
@@ -43,13 +50,7 @@ const registerUser = async (req, res) => {
 
     const token = generateToken(user._id);
 
-    
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    res.cookie("token", token, cookieOptions);
 
     res.status(201).json({
       success: true,
@@ -57,7 +58,6 @@ const registerUser = async (req, res) => {
     });
 
   } catch (error) {
-    console.log(error.message);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -65,13 +65,12 @@ const registerUser = async (req, res) => {
   }
 };
 
-// ===== Login User =====
+// ===== Login =====
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
-
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -80,7 +79,6 @@ const loginUser = async (req, res) => {
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
-
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -90,22 +88,14 @@ const loginUser = async (req, res) => {
 
     const token = generateToken(user._id);
 
-    // ✅ Set Cookie
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie("token", token, cookieOptions);
 
     res.status(200).json({
       success: true,
       message: "Login successful",
-      token
     });
 
   } catch (error) {
-    console.log(error.message);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -115,14 +105,14 @@ const loginUser = async (req, res) => {
 
 // ===== Logout =====
 const logoutUser = (req, res) => {
-  res.clearCookie("token");
-  res.json({
+  res.clearCookie("token", cookieOptions); // 🔥 important
+  res.status(200).json({
     success: true,
     message: "Logged out successfully",
   });
 };
 
-// ===== Get User Data (from token) =====
+// ===== Get User Data =====
 const getUserData = async (req, res) => {
   try {
     const token = req.cookies.token;
@@ -135,7 +125,6 @@ const getUserData = async (req, res) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
     const user = await User.findById(decoded.id).select("-password");
 
     res.json({
@@ -144,10 +133,22 @@ const getUserData = async (req, res) => {
     });
 
   } catch (error) {
-    console.log(error.message);
     res.status(401).json({
       success: false,
       message: "Invalid token",
+    });
+  }
+};
+
+// ===== Get Cars =====
+const getCars = async (req, res) => {
+  try {
+    const cars = await Car.find({ isAvailable: true });
+    res.json({ success: true, cars });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };
@@ -157,4 +158,5 @@ module.exports = {
   loginUser,
   logoutUser,
   getUserData,
+  getCars,
 };

@@ -35,7 +35,7 @@ const carSchema = new mongoose.Schema(
     category: {
       type: String,
       required: true,
-      enum: ["Sedan", "SUV", "Hatchback", "Luxury", "Sports"]
+      enum: ["Sedan", "SUV", "Hatchback", "Luxury", "Sports","Van"]
     },
 
     seating_capacity: {
@@ -53,7 +53,7 @@ const carSchema = new mongoose.Schema(
     transmission: {
       type: String,
       required: true,
-      enum: ["Manual", "Automatic"]
+      enum: ["Manual", "Automatic","Semi-Automatic"]
     },
 
     pricePerDay: {

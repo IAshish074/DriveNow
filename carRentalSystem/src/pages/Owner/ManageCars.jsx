@@ -1,27 +1,77 @@
 import React, { useEffect, useState } from "react";
-import { assets, dummyCarData } from "../../assets/assets";
+import { assets} from "../../assets/assets";
 import Title from "../../components/owner/Title";
+import { useAppContext } from "../../context/AppContext";
+import toast from "react-hot-toast";
 
 const ManageCars = () => {
+
+  const {isOwner,axios,currency} = useAppContext()
   const [cars, setCars] = useState([]);
-  const currency = import.meta.env.VITE_CURRENCY || "₹";
 
-  useEffect(() => {
-    setCars(dummyCarData);
-  }, []);
+  const fetchOwnerCars = async()=>{
+    try {
+      const {data} = await axios.get('/api/owner/cars')
+      if(data.success){
+        setCars(data.cars)
+      }
+      else{
+        toast.error(data.message)
+      }
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
 
-  /* ===== Toggle Availability ===== */
-  const toggleAvailability = (index) => {
-    const updated = [...cars];
-    updated[index].isAvaliable = !updated[index].isAvaliable;
-    setCars(updated);
-  };
+  const toggleAvailability = async(carId)=>{
+    try {
+      const {data} = await axios.post('/api/owner/toggle-car',{
+        carId
+      })
 
-  /* ===== Delete Car ===== */
-  const deleteCar = (index) => {
-    const updated = cars.filter((_, i) => i !== index);
-    setCars(updated);
-  };
+      if(data.success){
+        toast.success(data.message)
+        fetchOwnerCars()
+      }
+      else{
+        toast.error(data.message)
+      }
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
+
+const deleteCar = async(carId)=>{
+    try {
+      const confirm = window.confirm('Are you sure you want to delete this car?')
+
+      if(!confirm){
+        return null
+      }
+      const {data} = await axios.post('/api/owner/delete-car',{
+        carId
+      })
+
+      if(data.success){
+        toast.success(data.message)
+        fetchOwnerCars()
+      }
+      else{
+        toast.error(data.message)
+      }
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
+
+  useEffect(()=>{
+   isOwner && fetchOwnerCars()
+  },[isOwner])
+ 
+
+ 
+
+ 
 
   return (
     <div className="flex-1 w-full min-h-screen bg-gray-50
@@ -63,18 +113,18 @@ const ManageCars = () => {
               <span
                 className={`px-3 py-1 rounded-full text-xs font-semibold
                   ${
-                    car.isAvaliable
+                    car.isAvailable
                       ? "bg-green-100 text-green-600"
                       : "bg-red-100 text-red-600"
                   }`}
               >
-                {car.isAvaliable ? "Available" : "Unavailable"}
+                {car.isAvailable ? "Available" : "Unavailable"}
               </span>
 
               <div className="flex gap-3">
                 <img
                   src={
-                    car.isAvaliable
+                    car.isAvailable
                       ? assets.eye_close_icon
                       : assets.eye_icon
                   }
@@ -140,30 +190,30 @@ const ManageCars = () => {
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-semibold
                       ${
-                        car.isAvaliable
+                        car.isAvailable
                           ? "bg-green-100 text-green-600"
                           : "bg-red-100 text-red-600"
                       }`}
                   >
-                    {car.isAvaliable ? "Available" : "Unavailable"}
+                    {car.isAvailable ? "Available" : "Unavailable"}
                   </span>
                 </td>
 
                 <td className="p-4 flex items-center gap-4">
                   <img
                     src={
-                      car.isAvaliable
+                      car.isAvailable
                         ? assets.eye_close_icon
                         : assets.eye_icon
                     }
                     alt=""
-                    onClick={() => toggleAvailability(index)}
+                   onClick={()=> toggleAvailability(car._id)}
                     className="cursor-pointer h-5"
                   />
                   <img
                     src={assets.delete_icon}
                     alt=""
-                    onClick={() => deleteCar(index)}
+                     onClick={()=> deleteCar(car._id)}
                     className="cursor-pointer h-5"
                   />
                 </td>

@@ -1,20 +1,49 @@
 import React, { useState, useEffect } from "react";
-import { dummyMyBookingsData } from "../../assets/assets";
 import Title from "../../components/owner/Title";
+import { useAppContext } from "../../context/AppContext";
+import toast from "react-hot-toast";
 
 const ManageBookings = () => {
+  const { currency, axios } = useAppContext();
   const [bookings, setBookings] = useState([]);
-  const currency = import.meta.env.VITE_CURRENCY || "₹";
+
+  // ✅ Corrected function name + route
+  const fetchOwnerBookings = async () => {
+    try {
+      const { data } = await axios.get("/api/booking/owner");
+
+      if (data.success) {
+        setBookings(data.bookings);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  // ✅ Corrected route
+  const changeBookingStatus = async (bookingId, status) => {
+    try {
+      const { data } = await axios.post(
+        "/api/booking/change-status",
+        { bookingId, status }
+      );
+
+      if (data.success) {
+        toast.success(data.message);
+        fetchOwnerBookings(); // refresh data
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
 
   useEffect(() => {
-    setBookings(dummyMyBookingsData);
+    fetchOwnerBookings();
   }, []);
-
-  const handleStatusChange = (index, value) => {
-    const updated = [...bookings];
-    updated[index].status = value;
-    setBookings(updated);
-  };
 
   return (
     <div className="flex-1 w-full min-h-screen bg-gray-50
@@ -28,20 +57,20 @@ const ManageBookings = () => {
 
       {/* ================= MOBILE VIEW ================= */}
       <div className="md:hidden space-y-4 mt-6">
-        {bookings.map((booking, index) => (
+        {bookings.map((booking) => (
           <div
-            key={index}
+            key={booking._id}
             className="bg-white p-4 rounded-xl shadow-sm border"
           >
             <div className="flex items-center gap-3">
               <img
-                src={booking.car.image}
+                src={booking.car?.image}
                 alt=""
                 className="h-14 w-14 rounded-md object-cover"
               />
               <div>
                 <p className="font-semibold">
-                  {booking.car.brand} {booking.car.model}
+                  {booking.car?.brand} {booking.car?.model}
                 </p>
                 <p className="text-xs text-gray-500">
                   {booking.pickupDate.split("T")[0]} →{" "}
@@ -59,7 +88,10 @@ const ManageBookings = () => {
                 <select
                   value={booking.status}
                   onChange={(e) =>
-                    handleStatusChange(index, e.target.value)
+                    changeBookingStatus(
+                      booking._id,
+                      e.target.value
+                    )
                   }
                   className="px-2 py-1 border rounded-md text-xs"
                 >
@@ -86,7 +118,6 @@ const ManageBookings = () => {
 
       {/* ================= DESKTOP TABLE ================= */}
       <div className="hidden md:block mt-6 bg-white rounded-xl shadow-sm border overflow-x-auto">
-
         <table className="w-full text-left text-sm text-gray-600">
           <thead className="text-gray-500 border-b">
             <tr>
@@ -99,19 +130,19 @@ const ManageBookings = () => {
           </thead>
 
           <tbody>
-            {bookings.map((booking, index) => (
+            {bookings.map((booking) => (
               <tr
-                key={index}
+                key={booking._id}
                 className="border-b last:border-none hover:bg-gray-50"
               >
                 <td className="p-4 flex items-center gap-3">
                   <img
-                    src={booking.car.image}
+                    src={booking.car?.image}
                     alt=""
                     className="h-12 w-12 rounded-md object-cover"
                   />
                   <p className="font-medium">
-                    {booking.car.brand} {booking.car.model}
+                    {booking.car?.brand} {booking.car?.model}
                   </p>
                 </td>
 
@@ -135,7 +166,10 @@ const ManageBookings = () => {
                     <select
                       value={booking.status}
                       onChange={(e) =>
-                        handleStatusChange(index, e.target.value)
+                        changeBookingStatus(
+                          booking._id,
+                          e.target.value
+                        )
                       }
                       className="px-2 py-1 border rounded-md"
                     >
@@ -156,14 +190,11 @@ const ManageBookings = () => {
                     </span>
                   )}
                 </td>
-
               </tr>
             ))}
           </tbody>
         </table>
-
       </div>
-
     </div>
   );
 };

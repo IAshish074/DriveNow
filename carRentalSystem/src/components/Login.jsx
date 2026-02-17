@@ -1,8 +1,12 @@
 import React, { useState } from "react";
+import { useAppContext } from "../context/AppContext";
+import toast from "react-hot-toast";
 
-const Login = ({ setShowLogin }) => {
+const Login = () => {
 
-  const [state, setState] = useState("login"); // login | signup
+  const { setShowLogin, axios, navigate, fetchUser } = useAppContext();
+
+  const [state, setState] = useState("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -10,10 +14,40 @@ const Login = ({ setShowLogin }) => {
   const onSubmitHandler = async (e) => {
     e.preventDefault();
 
-    if (state === "login") {
-      console.log("Login Data:", { email, password });
-    } else {
-      console.log("Signup Data:", { name, email, password });
+    try {
+      const payload =
+        state === "register"
+          ? { name, email, password }
+          : { email, password };
+
+      const { data } = await axios.post(
+        `/api/user/${state}`,
+        payload,
+        { withCredentials: true }  // 🔥 IMPORTANT
+      );
+
+      if (data.success) {
+
+        await fetchUser();  // 🔥 Load user after login
+
+        setShowLogin(false);
+        navigate("/");
+
+        toast.success(
+          state === "login"
+            ? "Login Successful"
+            : "Account Created"
+        );
+
+      } else {
+        toast.error(data.message);
+      }
+
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message ||
+        error.message
+      );
     }
   };
 
@@ -27,82 +61,61 @@ const Login = ({ setShowLogin }) => {
         onSubmit={onSubmitHandler}
         onClick={(e) => e.stopPropagation()}
         className="bg-white text-gray-600 w-full max-w-sm 
-                   p-6 rounded-xl shadow-lg transition-all"
+                   p-6 rounded-xl shadow-lg"
       >
-
-        {/* Title */}
         <h2 className="text-2xl font-semibold mb-6 text-center text-gray-800">
-          {state === "login" ? "Login Now" : "Create Account"}
+          {state === "login"
+            ? "Login Now"
+            : "Create Account"}
         </h2>
 
-        {/* Name (Signup Only) */}
-        {state === "signup" && (
+        {state === "register" && (
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             type="text"
             placeholder="Enter your name"
             required
-            className="w-full border border-gray-300 outline-none 
-                       rounded-full py-2.5 px-4 mb-4 
-                       focus:ring-2 focus:ring-red-400"
+            className="w-full border border-gray-300 rounded-full py-2.5 px-4 mb-4 focus:ring-2 focus:ring-red-400"
           />
         )}
 
-        {/* Email */}
         <input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           type="email"
           placeholder="Enter your email"
           required
-          className="w-full border border-gray-300 outline-none 
-                     rounded-full py-2.5 px-4 mb-4 
-                     focus:ring-2 focus:ring-red-400"
+          className="w-full border border-gray-300 rounded-full py-2.5 px-4 mb-4 focus:ring-2 focus:ring-red-400"
         />
 
-        {/* Password */}
         <input
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           type="password"
           placeholder="Enter your password"
           required
-          className="w-full border border-gray-300 outline-none 
-                     rounded-full py-2.5 px-4 mb-4 
-                     focus:ring-2 focus:ring-red-400"
+          className="w-full border border-gray-300 rounded-full py-2.5 px-4 mb-4 focus:ring-2 focus:ring-red-400"
         />
 
-        {/* Forgot Password (Login Only) */}
-        {state === "login" && (
-          <div className="text-right mb-4">
-            <button
-              type="button"
-              className="text-blue-600 underline text-sm"
-            >
-              Forgot Password?
-            </button>
-          </div>
-        )}
-
-        {/* Submit Button */}
         <button
           type="submit"
           className="w-full bg-red-600 hover:bg-red-700 
                      active:scale-95 transition 
                      py-2.5 rounded-full text-white font-medium"
         >
-          {state === "login" ? "Log in" : "Sign up"}
+          {state === "login"
+            ? "Log in"
+            : "Sign up"}
         </button>
 
-        {/* Toggle */}
         <p className="text-center mt-4 text-sm">
           {state === "login" ? (
             <>
               Don’t have an account?{" "}
               <button
                 type="button"
-                onClick={() => setState("signup")}
+                onClick={() => setState("register")}
                 className="text-blue-500 underline"
               >
                 Signup Now
@@ -121,7 +134,6 @@ const Login = ({ setShowLogin }) => {
             </>
           )}
         </p>
-
       </form>
     </div>
   );

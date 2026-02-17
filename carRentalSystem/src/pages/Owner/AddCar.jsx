@@ -1,11 +1,14 @@
 import React, { useState } from "react";
 import Title from "../../components/owner/Title";
 import { assets } from "../../assets/assets";
+import { useAppContext } from "../../context/AppContext";
+import toast from "react-hot-toast";
 
 const AddCar = () => {
-  const currency = import.meta.env.VITE_CURRENCY;
+  const { axios, currency } = useAppContext();
 
   const [image, setImage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [car, setCar] = useState({
     brand: "",
@@ -23,24 +26,65 @@ const AddCar = () => {
   const onSubmitHandler = async (e) => {
     e.preventDefault();
 
-    console.log("Car Data:", car);
-    console.log("Image:", image);
+    if (isLoading) return;
 
-    // Yaha future me API call laga sakte ho
+    if (!image) {
+      toast.error("Please upload car image");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("image", image);
+      formData.append("carData", JSON.stringify(car));
+
+      const { data } = await axios.post(
+        "/api/owner/add-car",
+        formData
+      );
+
+      if (data.success) {
+        toast.success("Car Listed Successfully");
+
+        setImage(null);
+        setCar({
+          brand: "",
+          model: "",
+          year: "",
+          pricePerDay: "",
+          category: "",
+          transmission: "",
+          fuel_type: "",
+          seating_capacity: "",
+          location: "",
+          description: "",
+        });
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || error.message
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="px-4 py-10 md:px-10 flex-1">
       <Title
         title="Add New Car"
-        subTitle="Fill in details to list a new car for booking, including pricing and specifications."
+        subTitle="Fill in details to list a new car for booking."
       />
 
       <form
         onSubmit={onSubmitHandler}
-        className="flex flex-col gap-6 text-gray-600 text-sm mt-6 max-w-4xl"
+        className="flex flex-col gap-6 text-gray-600 text-sm mt-6 max-w-5xl"
       >
-        {/* ================= Image Upload ================= */}
+        {/* Image Upload */}
         <div className="flex items-center gap-4">
           <label htmlFor="car-image" className="cursor-pointer">
             <img
@@ -50,22 +94,24 @@ const AddCar = () => {
                   : assets.upload_icon
               }
               alt="upload"
-              className="h-16 w-16 object-cover rounded border"
+              className="h-20 w-20 object-cover rounded border"
             />
             <input
               type="file"
               id="car-image"
               accept="image/*"
               hidden
-              onChange={(e) => setImage(e.target.files[0])}
+              onChange={(e) =>
+                setImage(e.target.files[0])
+              }
             />
           </label>
           <p className="text-gray-500">
-            Upload a picture of your car
+            Upload car image
           </p>
         </div>
 
-        {/* ================= Brand & Model ================= */}
+        {/* Brand & Model */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <InputField
             label="Brand"
@@ -74,7 +120,6 @@ const AddCar = () => {
               setCar({ ...car, brand: val })
             }
           />
-
           <InputField
             label="Model"
             value={car.model}
@@ -84,7 +129,7 @@ const AddCar = () => {
           />
         </div>
 
-        {/* ================= Year Price Category ================= */}
+        {/* Year, Price, Category */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           <InputField
             type="number"
@@ -94,7 +139,6 @@ const AddCar = () => {
               setCar({ ...car, year: val })
             }
           />
-
           <InputField
             type="number"
             label={`Daily Price (${currency})`}
@@ -103,7 +147,6 @@ const AddCar = () => {
               setCar({ ...car, pricePerDay: val })
             }
           />
-
           <SelectField
             label="Category"
             value={car.category}
@@ -114,16 +157,12 @@ const AddCar = () => {
           />
         </div>
 
-        {/* ================= Transmission Fuel Seating ================= */}
+        {/* Transmission, Fuel, Seating */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           <SelectField
             label="Transmission"
             value={car.transmission}
-            options={[
-              "Automatic",
-              "Manual",
-              "Semi-Automatic",
-            ]}
+            options={["Automatic", "Manual", "Semi-Automatic"]}
             onChange={(val) =>
               setCar({ ...car, transmission: val })
             }
@@ -132,13 +171,7 @@ const AddCar = () => {
           <SelectField
             label="Fuel Type"
             value={car.fuel_type}
-            options={[
-              "Gas",
-              "Diesel",
-              "Petrol",
-              "Electric",
-              "Hybrid",
-            ]}
+            options={["Petrol", "Diesel", "Electric", "Hybrid"]}
             onChange={(val) =>
               setCar({ ...car, fuel_type: val })
             }
@@ -154,28 +187,27 @@ const AddCar = () => {
           />
         </div>
 
-        {/* ================= Location ================= */}
+        {/* Location */}
         <SelectField
           label="Location"
           value={car.location}
           options={[
-            "New York",
-            "Los Angeles",
-            "Houston",
-            "Chicago",
+            "Delhi",
+            "Mumbai",
+            "Bangalore",
+            "Chandigarh",
           ]}
           onChange={(val) =>
             setCar({ ...car, location: val })
           }
         />
 
-        {/* ================= Description ================= */}
+        {/* Description */}
         <div className="flex flex-col">
           <label>Description</label>
           <textarea
             rows={4}
             required
-            className="px-3 py-2 mt-1 border rounded-md outline-none focus:ring-2 focus:ring-red-400"
             value={car.description}
             onChange={(e) =>
               setCar({
@@ -183,16 +215,21 @@ const AddCar = () => {
                 description: e.target.value,
               })
             }
+            className="px-3 py-2 mt-1 border rounded-md outline-none focus:ring-2 focus:ring-red-400"
           />
         </div>
 
-        {/* ================= Submit Button ================= */}
+        {/* Submit Button */}
         <button
           type="submit"
-          className="flex items-center gap-2 px-6 py-2.5 mt-4 bg-red-600 hover:bg-red-700 text-white rounded-md font-medium w-max transition"
+          disabled={isLoading}
+          className="flex items-center justify-center gap-2 px-6 py-3 mt-4
+                     bg-red-600 hover:bg-red-700
+                     disabled:opacity-50
+                     text-white rounded-md font-medium transition"
         >
           <img src={assets.tick_icon} alt="tick" />
-          List Your Car
+          {isLoading ? "Listing..." : "List Your Car"}
         </button>
       </form>
     </div>
@@ -200,6 +237,7 @@ const AddCar = () => {
 };
 
 export default AddCar;
+
 
 /* ================= Reusable Components ================= */
 

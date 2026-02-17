@@ -3,9 +3,11 @@ import Title from './Title'
 import { assets, dummyCarData } from '../assets/assets'
 import CarCards from './CarCards'
 import { useNavigate } from 'react-router-dom'
+import { useAppContext } from '../context/AppContext'
 
 const FeaturesSection = () => {
     const navigate = useNavigate()
+    const {cars} = useAppContext()
   return (
     <section className="
       bg-gray-50
@@ -29,7 +31,7 @@ const FeaturesSection = () => {
         lg:grid-cols-3
         gap-8
       ">
-        {dummyCarData.slice(0, 6).map((car) => (
+        {cars.slice(0, 6).map((car) => (
           <CarCards key={car._id} car={car} />
         ))}
       </div>
