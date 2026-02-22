@@ -13,10 +13,11 @@ const generateToken = (userId) => {
 };
 
 // ===== Cookie Options (Reusable) =====
+const isProduction = process.env.NODE_ENV === "production";
 const cookieOptions = {
   httpOnly: true,
-  secure: false,        // 🔥 localhost ke liye false
-  sameSite: "lax",      // 🔥 strict se lax better for dev
+  secure: isProduction,           // true on Vercel (HTTPS), false on localhost
+  sameSite: isProduction ? "none" : "lax",  // "none" required for cross-origin cookies
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
