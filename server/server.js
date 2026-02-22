@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 3000;
 // ===== CORS (VERY IMPORTANT FOR COOKIES) =====
 app.use(
   cors({
-    origin: "http://localhost:5173", // frontend URL
+    origin: "https://drive-now-virid.vercel.app",
     credentials: true,
   })
 );
